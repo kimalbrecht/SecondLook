@@ -27,42 +27,18 @@ function sentimentVisPack(data) {
     var xAdjust = 0;
     var yAdjust = 0;
 
-    var updateCir = svgPack.selectAll("circle").data(nodes);
-    var enterCir = updateCir.enter()
-        .append("circle")
-        .attr("class", "cir")
-        .on("mouseover", function(d) {
-            if (d.children === undefined) {
-                var image = document.getElementById("hover-img-pack");
-                image.src = d.data.url;
-                document.getElementById("title").innerHTML =
-                    "<em>" + d.data.title + "</em>";
-                document.getElementById("artist").innerHTML =
-                    "<strong>Artist: </strong>" + d.data.artist;
-                document.getElementById("century").innerHTML =
-                    "<strong>Century: </strong>" + d.data.century;
-                document.getElementById("emotion").innerHTML =
-                    "<strong>Dominant sentiment: </strong>" + d.data.name.toLowerCase()
-                    + " (" + Math.floor(d.data.value) + "% confidence)";
-                document.getElementById("gender").innerHTML =
-                    "<strong>Gender: </strong>" + d.data.gender.toLowerCase()
-                    + " (" + Math.floor(d.data.gconfidence) + "% confidence)";
-            }
-        })
-        .on("mouseout", function(d) {
-            if (d.data.name === undefined) {
-                var image = document.getElementById("hover-img-pack");
-                image.src = "img/hamlogo.png";
-                document.getElementById("title").innerHTML = "";
-                document.getElementById("artist").innerHTML = "";
-                document.getElementById("century").innerHTML =
-                    "<strong>Hover over circles <br> to view paintings</strong>";
-                document.getElementById("emotion").innerHTML = "";
-                document.getElementById("gender").innerHTML = "";
-            }
+    // Here I'm connecting each node to an ID. So d3 'knows' about ach point.
+    var updateCir = svgPack
+        .selectAll(".cir")
+        .data(nodes, function(d,i) { 
+            // d.id = d.x+'-'+d.y;
+            // console.log(d.data.id)
+            return d.data.id; 
         });
 
-    enterCir.merge(updateCir)
+    // console.log(nodes)
+
+    updateCir
         .transition()
         .duration(dur)
         .attr("cx",function(d) {
@@ -94,7 +70,80 @@ function sentimentVisPack(data) {
         })
         .style("stroke-width", 0.25);
 
-    updateCir.exit().remove();
+
+    var newCircles = updateCir.enter()
+        .append("circle")
+        .attr("class", "cir")
+        .attr("cx", width/2)
+        .attr("cy", height/2)
+        .attr("r", 0)
+        .style("fill", function (d) {
+            if (d.data.name !== "RootNode" && d.data.name !== undefined) {
+                return sentColKey[d.data.name];
+            }
+            else {
+                // return "#F0F0F0";
+                return "white";
+            }
+        })
+        .style("stroke", function (d) {
+            if (d.data.name !== "RootNode" && d.data.name !== undefined) {
+                return "black";
+            }
+            else {
+                // return "#F0F0F0";
+                return "white";
+            }
+        })
+
+    newCircles
+        .transition()
+        .duration(dur)
+        .attr("cx",function(d) {
+            return d.x + xAdjust;
+        })
+        .attr("cy",function(d) {
+            return d.y + yAdjust;
+        })
+        .attr("r",function(d) {
+            return d.r;
+        })
+        .style("stroke-width", 0.25)
+
+    newCircles
+        .on("mouseover", function(d) {
+            if (d.children === undefined) {
+                var image = document.getElementById("hover-img-pack");
+                image.src = d.data.url;
+                document.getElementById("title").innerHTML =
+                    "<em>" + d.data.title + "</em>";
+                document.getElementById("artist").innerHTML =
+                    "<strong>Artist: </strong>" + d.data.artist;
+                document.getElementById("century").innerHTML =
+                    "<strong>Century: </strong>" + d.data.century;
+                document.getElementById("emotion").innerHTML =
+                    "<strong>Dominant sentiment: </strong>" + d.data.name.toLowerCase()
+                    + " (" + Math.floor(d.data.value) + "% confidence)";
+                document.getElementById("gender").innerHTML =
+                    "<strong>Gender: </strong>" + d.data.gender.toLowerCase()
+                    + " (" + Math.floor(d.data.gconfidence) + "% confidence)";
+            }
+        })
+        .on("mouseout", function(d) {
+            if (d.data.name === undefined) {
+                var image = document.getElementById("hover-img-pack");
+                image.src = "img/hamlogo.png";
+                document.getElementById("title").innerHTML = "";
+                document.getElementById("artist").innerHTML = "";
+                document.getElementById("century").innerHTML =
+                    "<strong>Hover over circles <br> to view paintings</strong>";
+                document.getElementById("emotion").innerHTML = "";
+                document.getElementById("gender").innerHTML = "";
+            }
+        });
+
+        updateCir.exit().remove();
+
 }
 
 /* Reformat data for use with d3.hierarchy(). (Ironically, data must be in a specific hierarchy format
@@ -109,6 +158,7 @@ function getHierarchyData(data) {
             if (sentiments[i] === data[j].emotion.Value) {
                 var child = {
                     "name": data[j].emotion.Value,
+                    "id": data[j].rank,
                     "value": data[j].emotion.Confidence,
                     "gender": data[j].gender.Value,
                     "gconfidence": data[j].gender.Confidence,
@@ -123,12 +173,14 @@ function getHierarchyData(data) {
         }
         var obj = {
             "name": undefined,
+            "id": 'obj'+i,
             "value": sentimentsMap[sentiments[i]],
             "children": children
         };
         sentimentsObjects.push(obj);
     }
     return {"name": "RootNode",
+        "id": "root",
         "value": data.length,
         "children": sentimentsObjects
     };
