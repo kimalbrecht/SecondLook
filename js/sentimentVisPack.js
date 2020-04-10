@@ -31,8 +31,6 @@ function sentimentVisPack(data) {
     var updateCir = svgPack
         .selectAll(".cir")
         .data(nodes, function(d,i) { 
-            // d.id = d.x+'-'+d.y;
-            // console.log(d.data.id)
             return d.data.id; 
         });
 
